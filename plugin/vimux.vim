@@ -24,7 +24,7 @@ function! VimuxRunCommandInDir(command, useFile)
 endfunction
 
 function! VimuxRunLastCommand()
-  if exists("g:VimuxRunnerIndex")
+  if exists("g:VimuxRunnerId")
     call VimuxRunCommand(g:VimuxLastCommand)
   else
     echo "No last vimux command."
@@ -32,7 +32,7 @@ function! VimuxRunLastCommand()
 endfunction
 
 function! VimuxRunCommand(command, ...)
-  if !exists("g:VimuxRunnerIndex") || _VimuxHasRunner(g:VimuxRunnerIndex) == -1
+  if !exists("g:VimuxRunnerId") || _VimuxHasRunner(g:VimuxRunnerId) == -1
     call VimuxOpenRunner()
   endif
 
@@ -57,18 +57,17 @@ function! VimuxSendText(text)
 endfunction
 
 function! VimuxSendKeys(keys)
-  if exists("g:VimuxRunnerIndex")
-    call _VimuxTmux("send-keys -t ".g:VimuxRunnerIndex." ".a:keys)
+  if exists("g:VimuxRunnerId")
+    call _VimuxTmux("send-keys -t ".g:VimuxRunnerId." ".a:keys)
   else
     echo "No vimux runner pane/window. Create one with VimuxOpenRunner"
   endif
 endfunction
 
 function! VimuxOpenRunner()
-  let nearestIndex = _VimuxNearestIndex()
-
-  if _VimuxOption("g:VimuxUseNearest", 1) == 1 && nearestIndex != -1
-    let g:VimuxRunnerIndex = nearestIndex
+  let nearestId = _VimuxNearestId()
+  if _VimuxOption("g:VimuxUseNearest", 1) == 1 && nearestId != -1
+    let g:VimuxRunnerId = nearestId
   else
     if _VimuxRunnerType() == "pane"
       let height = _VimuxOption("g:VimuxHeight", 20)
@@ -77,43 +76,42 @@ function! VimuxOpenRunner()
     elseif _VimuxRunnerType() == "window"
       call _VimuxTmux("new-window")
     endif
-
-    let g:VimuxRunnerIndex = _VimuxTmuxIndex()
+    let g:VimuxRunnerId = _VimuxTmuxId()
     call _VimuxTmux("last-"._VimuxRunnerType())
   endif
 endfunction
 
 function! VimuxCloseRunner()
-  if exists("g:VimuxRunnerIndex")
-    call _VimuxTmux("kill-"._VimuxRunnerType()." -t ".g:VimuxRunnerIndex)
-    unlet g:VimuxRunnerIndex
+  if exists("g:VimuxRunnerId")
+    call _VimuxTmux("kill-"._VimuxRunnerType()." -t ".g:VimuxRunnerId)
+    unlet g:VimuxRunnerId
   endif
 endfunction
 
 function! VimuxTogglePane()
-  if exists("g:VimuxRunnerIndex")
+  if exists("g:VimuxRunnerId")
     if _VimuxRunnerType() == "window"
-        call _VimuxTmux("join-pane -d -s ".g:VimuxRunnerIndex." -p "._VimuxOption("g:VimuxHeight", 20))
+        call _VimuxTmux("join-pane -d -s ".g:VimuxRunnerId." -p "._VimuxOption("g:VimuxHeight", 20))
         let g:VimuxRunnerType = "pane"
     elseif _VimuxRunnerType() == "pane"
-		let g:VimuxRunnerIndex=substitute(_VimuxTmux("break-pane -d -t ".g:VimuxRunnerIndex." -P -F '#{window_index}'"), "\n", "", "")
+		let g:VimuxRunnerId=substitute(_VimuxTmux("break-pane -d -t ".g:VimuxRunnerId." -P -F '#{window_index}'"), "\n", "", "")
         let g:VimuxRunnerType = "window"
     endif
   endif
 endfunction
 
 function! VimuxZoomRunner()
-  if exists("g:VimuxRunnerIndex")
+  if exists("g:VimuxRunnerId")
     if _VimuxRunnerType() == "pane"
-      call _VimuxTmux("resize-pane -Z -t ".g:VimuxRunnerIndex)
+      call _VimuxTmux("resize-pane -Z -t ".g:VimuxRunnerId)
     elseif _VimuxRunnerType() == "window"
-      call _VimuxTmux("select-window -t ".g:VimuxRunnerIndex)
+      call _VimuxTmux("select-window -t ".g:VimuxRunnerId)
     endif
   endif
 endfunction
 
 function! VimuxInspectRunner()
-  call _VimuxTmux("select-"._VimuxRunnerType()." -t ".g:VimuxRunnerIndex)
+  call _VimuxTmux("select-"._VimuxRunnerType()." -t ".g:VimuxRunnerId)
   call _VimuxTmux("copy-mode")
 endfunction
 
@@ -134,8 +132,8 @@ function! VimuxInterruptRunner()
 endfunction
 
 function! VimuxClearRunnerHistory()
-  if exists("g:VimuxRunnerIndex")
-    call _VimuxTmux("clear-history -t ".g:VimuxRunnerIndex)
+  if exists("g:VimuxRunnerId")
+    call _VimuxTmux("clear-history -t ".g:VimuxRunnerId)
   endif
 endfunction
 
@@ -154,23 +152,23 @@ function! _VimuxTmuxSession()
   return _VimuxTmuxProperty("#S")
 endfunction
 
-function! _VimuxTmuxIndex()
+function! _VimuxTmuxId()
   if _VimuxRunnerType() == "pane"
-    return _VimuxTmuxPaneIndex()
+    return _VimuxTmuxPaneId()
   else
-    return _VimuxTmuxWindowIndex()
+    return _VimuxTmuxWindowId()
   end
 endfunction
 
-function! _VimuxTmuxPaneIndex()
-  return _VimuxTmuxProperty("#I.#P")
+function! _VimuxTmuxPaneId()
+  return _VimuxTmuxProperty("#D")
 endfunction
 
-function! _VimuxTmuxWindowIndex()
+function! _VimuxTmuxWindowId()
   return _VimuxTmuxProperty("#I")
 endfunction
 
-function! _VimuxNearestIndex()
+function! _VimuxNearestId()
   let views = split(_VimuxTmux("list-"._VimuxRunnerType()."s"), "\n")
 
   for view in views
@@ -199,5 +197,5 @@ function! _VimuxTmuxProperty(property)
 endfunction
 
 function! _VimuxHasRunner(index)
-  return match(_VimuxTmux("list-"._VimuxRunnerType()."s -a"), a:index.":")
+  return match(_VimuxTmux("list-"._VimuxRunnerType()."s -aF '#{pane_id}'"), a:index)
 endfunction

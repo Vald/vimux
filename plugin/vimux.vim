@@ -261,3 +261,4 @@ endfunction
 function! _VimuxHasRunner(index)
   return match(_VimuxTmux("list-"._VimuxRunnerType()."s -aF '#{pane_id}'"), a:index)
 endfunction
+

@@ -270,6 +270,78 @@ is to stop the normal return that is sent to the runner pane and use our own
 new line so the clojure REPL will evaluate the selected text without adding an
 extra return. Thanks to @trptcolin for discovering this issue.
 
+------------------------------------------------------------------------------
+                                                *VimuxExampleKeybindingFileType*
+Full Keybind Example with filetype on~
+
+One runner by filetype on (in pane), and default runner set for 
+R and python.
+Example above partially re-used but with key bindings behaving like
+vim-r-plugin.
+ 
+>
+ let g:VimuxUseNearest=0
+ let g:VimuxOrientation="h"
+ let g:VimuxTmuxRunnerByFt=1
+ let g:VimuxOpenFTRunner=1
+ let g:VimuxRunnerr="R"
+ let g:VimuxRunnerpython="ipython"
+
+ " Prompt for a command to run
+ map <LocalLeader>vp :VimuxPromptCommand<CR>
+
+ " Run last command executed by VimuxRunCommand
+ map <LocalLeader>vl :VimuxRunLastCommand<CR>
+
+ " Open vim tmux runner opened by VimuxRunCommand
+ " (with the runner set for ft, if ...)
+ map <LocalLeader>vf :VimuxOpenRunner<CR>
+
+ " Close vim tmux runner opened by VimuxRunCommand
+ map <LocalLeader>vq :VimuxCloseRunner<CR>
+
+ " Interrupt any command running in the runner pane
+ map <LocalLeader>vx :VimuxInterruptRunner<CR>
+
+ " Zoom the runner pane (use <bind-key> z to restore runner pane)
+ map <LocalLeader>vz :call VimuxZoomRunner()<CR>
+
+ function! VimuxSlime(pre, post)
+  call VimuxSendText(a:pre.@v.a:post)
+  call VimuxSendKeys("Enter")
+ endfunction
+
+ function! VimuxSlimeHelp()
+  call VimuxSlime("?", "")
+  call VimuxSendKeys("Enter")
+  call _VimuxTmux("select-pane -t ".g:VimuxRunnerId)
+ endfunction
+
+ " Send selection to runner and stay
+ vmap <LocalLeader>ss "vy :call VimuxSlime("", "")<CR>
+
+ " Send selection and move down
+ vmap <LocalLeader>sd <LocalLeader>ss<CR>j
+
+ " Word below cursor sent to runner with leading "?"
+ " character (help page in some cases)
+ nmap <LocalLeader>r? bve"vy :call VimuxSlimeHelp()<CR>
+
+ " Word below cursor sent to runner 
+ nmap <LocalLeader>rp bve<LocalLeader>ss
+
+ " Send current paragraph to runner and stay
+ nmap <LocalLeader>pp vip<LocalLeader>ss
+
+ " Send current paragraph to runner and move down
+ nmap <LocalLeader>pd vip<LocalLeader>ss<CR>
+
+ " Send current line to runner and stay
+ nmap <LocalLeader>l V<LocalLeader>ss
+
+ " Send current line to runner and move down
+ nmap <LocalLeader>d V<LocalLeader>ss<CR>
+<
 
 ==============================================================================
 CONFIGURATION (4)                                           *VimuxConfiguration*

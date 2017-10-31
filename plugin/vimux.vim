@@ -32,7 +32,16 @@ function! VimuxRunLastCommand()
 endfunction
 
 function! VimuxRunCommand(command, ...)
-  if !exists("g:VimuxRunnerId") || _VimuxHasRunner(g:VimuxRunnerId) == -1
+  if _VimuxOption("g:VimuxTmuxRunnerByFt", 0) == 1
+    if exists("g:VimuxRunnerId".&ft)
+      execute ":let l:VimuxRunnerId = g:VimuxRunnerId".&ft
+      if _VimuxHasRunner(l:VimuxRunnerId) == -1
+        call VimuxOpenRunner()
+      endif
+    else
+        call VimuxOpenRunner()
+    endif
+  elseif !exists("g:VimuxRunnerId") || _VimuxHasRunner(g:VimuxRunnerId) == -1
     call VimuxOpenRunner()
   endif
 
@@ -57,7 +66,14 @@ function! VimuxSendText(text)
 endfunction
 
 function! VimuxSendKeys(keys)
-  if exists("g:VimuxRunnerId")
+  if _VimuxOption("g:VimuxTmuxRunnerByFt", 0) == 1
+    if exists("g:VimuxRunnerId".&ft)
+      execute ":let l:VimuxRunnerId = g:VimuxRunnerId".&ft
+      call _VimuxTmux("send-keys -t ".l:VimuxRunnerId." ".a:keys)
+    else
+      echo "No vimux runner pane/window. Create one with VimuxOpenRunner"
+    endif
+  elseif exists("g:VimuxRunnerId")
     call _VimuxTmux("send-keys -t ".g:VimuxRunnerId." ".a:keys)
   else
     echo "No vimux runner pane/window. Create one with VimuxOpenRunner"
@@ -72,7 +88,40 @@ function! VimuxOpenRunner()
     if _VimuxRunnerType() == "pane"
       let height = _VimuxOption("g:VimuxHeight", 20)
       let orientation = _VimuxOption("g:VimuxOrientation", "v")
-      call _VimuxTmux("split-window -p ".height." -".orientation)
+      if _VimuxOption("g:VimuxTmuxRunnerByFt", 0) == 1
+        if exists("g:VimuxRunnerId".&ft)
+          echo "Vimux runner pane/window already running for ".&ft
+        else
+          let l:command = "split-window -p ".height
+		  if exists("g:VimuxRunnerLastId")
+		    let l:command = l:command." -t ".g:VimuxRunnerLastId
+		    if orientation == "v"
+              let l:command = l:command." -h"
+			else
+              let l:command = l:command." -v"
+			endif
+		  else
+            let l:command = l:command." -".orientation
+		  endif
+          call _VimuxTmux(l:command)
+          execute ":let g:VimuxRunnerId".&ft." = _VimuxTmuxId()"
+          execute ":let g:VimuxRunnerLastId=g:VimuxRunnerId".&ft
+          if exists("g:VimuxRunnerIds")
+            call add(g:VimuxRunnerIds,g:VimuxRunnerLastId)
+          else
+		    let g:VimuxRunnerIds=[g:VimuxRunnerLastId]
+		  endif
+		  if _VimuxOption("g:VimuxOpenFTRunner", 0) == 1
+            if exists("g:VimuxRunner".&ft)
+              execute "VimuxRunCommand(g:VimuxRunner".&ft.")"
+			else
+              echo "No Vimux runner defined for ".&ft." use g:VimuxRunner".&ft." to set"
+            endif
+          endif
+        endif
+      else
+        call _VimuxTmux("split-window -p ".height." -".orientation)
+      endif
     elseif _VimuxRunnerType() == "window"
       call _VimuxTmux("new-window")
     endif
@@ -82,7 +131,19 @@ function! VimuxOpenRunner()
 endfunction
 
 function! VimuxCloseRunner()
-  if exists("g:VimuxRunnerId")
+  if _VimuxOption("g:VimuxTmuxRunnerByFt", 0) == 1
+    if exists("g:VimuxRunnerId".&ft)
+      execute ":let l:VimuxRunnerId=g:VimuxRunnerId".&ft
+      call _VimuxTmux("kill-"._VimuxRunnerType()." -t ".l:VimuxRunnerId)
+	  let g:VimuxRunnerIds=filter(g:VimuxRunnerIds,'v:val != l:VimuxRunnerId')
+      execute ":unlet g:VimuxRunnerId".&ft
+	  if len(g:VimuxRunnerIds) == 0
+        unlet g:VimuxRunnerLastId
+      elseif _VimuxHasRunner(g:VimuxRunnerLastId) == -1
+        let g:VimuxRunnerLastId=g:VimuxRunnerIds[-1]
+      endif
+    endif
+  elseif exists("g:VimuxRunnerId")
     call _VimuxTmux("kill-"._VimuxRunnerType()." -t ".g:VimuxRunnerId)
     unlet g:VimuxRunnerId
   endif

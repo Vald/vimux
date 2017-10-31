@@ -362,5 +362,43 @@ redefine this if you're using something like tmate.
 
 Default: "tmux"
 
+------------------------------------------------------------------------------
+                                                           *VimuxTmuxRunnerByFt*
+2.7 g:VimuxTmuxRunnerByFt~
+
+If 1, make vimux link all files with same filetype to a unique runner. One 
+Runner can be launch by filetype open in vim. This feature is available
+only in 'pane' mode.
+
+New runners are stacked : if g:VimuxOrientation is "h", the first runner
+is added in a new pane to the right of current pane ; the second runner
+is added in a new pane to the bottom of the first pane, etc.
+If g:VimuxOrientation is "v", runners are added side by side.
+
+g:VimuxUseNearset must be turned off to activate this feature.
+
+  let g:VimuxUseNearest = 0
+  let g:VimuxTmuxRunnerByFt = 1
+
+Default: 0
+
+------------------------------------------------------------------------------
+                                                            *VimuxOpenFTRunner*
+2.7 g:VimuxOpenFTRunner~
+
+Should Vimux try to launch a default program in the runner according with 
+the filetype ? For example in *.R files, it could be nice to automatically
+launch R in the runner. If 1, Vimux search for the definition of the parameter
+"g:VimuxRunner".&ft , ie "g:VimuxRunnerr" for R files ; "g:VimuxRunnerpython"
+for python files ; etc. If not defined, the runner is launched without 
+any default program.
+
+  let g:VimuxOpenFTRunner = 1
+  let g:VimuxRunnerr = "R"
+  let g:VimuxRunnerpython = "python"
+  let g:VimuxRunnerpython = "ipython"
+
+Default: 0
+
 ==============================================================================
 vim:tw=78:ts=2:sw=2:expandtab:ft=help:norl:
